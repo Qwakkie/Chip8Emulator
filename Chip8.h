@@ -1,14 +1,19 @@
 #pragma once
 #include <string>
 
+struct SDL_Window;
+
 class Chip8
 {
 public:
+	Chip8(float windowWidth, float windowHeight);
+	~Chip8();
 	void Initialize();
 	void LoadGame(const std::string&);
 	void EmulateCycle();
 	unsigned char const* GetScreenBuffer(int& outScreenWidth, int& outScreenHeight)const;
-	bool DrawFlag();
+	void InitializeGraphics(const std::string windowTitle);
+	void DrawGraphics();
 	void SetKeys();
 private:
 	//35 opcodes, 2 bytes long
@@ -42,5 +47,12 @@ private:
 	unsigned char key[keyAmount]{};
 
 	bool drawFlag{true};
+
+	//SDL variables
+	SDL_Window* m_pWindow{};
+	//SDL_GLContext m_pContext{};
+	float m_WindowWidth{};
+	float m_WindowHeight{};
+	void RenderFilledRectangle(float width, float height, float x, float y);
 };
 

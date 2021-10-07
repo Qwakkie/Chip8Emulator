@@ -1,7 +1,24 @@
 #include <fstream>
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include <Windows.h>
+#include <SDL.h>
+#include <SDL_opengl.h>
+#include <gl/GLU.h>
 #include "Chip8.h"
+
+#include <iostream>
+
+Chip8::Chip8(float windowWidth, float windowHeight)
+	:m_WindowWidth(windowWidth)
+	,m_WindowHeight(windowHeight)
+{
+}
+
+Chip8::~Chip8()
+{
+	SDL_DestroyWindow(m_pWindow);
+	SDL_Quit();
+}
 
 void Chip8::Initialize()
 {
@@ -354,9 +371,65 @@ unsigned char const* Chip8::GetScreenBuffer(int& outScreenWidth, int& outScreenH
 	return screenBuffer;
 }
 
-bool Chip8::DrawFlag()
+
+void Chip8::InitializeGraphics(const std::string windowTitle)
 {
-	return drawFlag;
+#pragma region SDL Stuff
+	//Create window + surfaces
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0)
+	{
+		throw std::runtime_error(std::string("SDL_Init Error: ") + SDL_GetError());
+	}
+
+	m_pWindow = SDL_CreateWindow(
+		windowTitle.c_str(),
+		SDL_WINDOWPOS_CENTERED,
+		SDL_WINDOWPOS_CENTERED,
+		m_WindowWidth, m_WindowHeight,
+		SDL_WINDOW_OPENGL);
+
+	SDL_GL_CreateContext(m_pWindow);
+	
+	if(SDL_GL_SetSwapInterval(1) != 0)
+	{
+		std::cout << std::string("SDL_Init Error: ") + SDL_GetError()<<std::endl;
+	}
+	
+	// Set the Projection matrix to the identity matrix
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+
+	// Set up a two-dimensional orthographic viewing region.
+	gluOrtho2D(0, m_WindowWidth, 0, m_WindowHeight); // y from bottom to top
+
+	// Set the viewport to the client window area
+	// The viewport is the rectangu lar region of the window where the image is drawn.
+	glViewport(0, 0, m_WindowWidth, m_WindowHeight);
+
+	// Set the Modelview matrix to the identity matrix
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+#pragma endregion
+}
+
+void Chip8::DrawGraphics()
+{
+	glClearColor(0.f, 0.f, 0.f, 0.f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	const float pixelSize{ m_WindowWidth / screenWidth };
+
+	for (int y{}; y < screenHeight; ++y)
+	{
+		for (int x{}; x < screenWidth; ++x)
+		{
+			if (screenBuffer[x + y * screenWidth])
+			{
+				RenderFilledRectangle(pixelSize, pixelSize, x, y);
+			}
+		}
+	}
+
+	SDL_GL_SwapWindow(m_pWindow);
 }
 
 void Chip8::SetKeys()
@@ -377,4 +450,17 @@ void Chip8::SetKeys()
 	key[13] = static_cast<unsigned char>(GetKeyState('R'));
 	key[14] = static_cast<unsigned char>(GetKeyState('F'));
 	key[15] = static_cast<unsigned char>(GetKeyState('V'));
+}
+
+void Chip8::RenderFilledRectangle(float width, float height, float x, float y)
+{
+	glColor3i(1.f, 1.f, 1.f);
+	glBegin(GL_POLYGON);
+	{
+		glVertex2f(x, y);
+		glVertex2f(x, y + height);
+		glVertex2f(x + width, y + height);
+		glVertex2f(x, y + height);
+	}
+	glEnd();
 }
